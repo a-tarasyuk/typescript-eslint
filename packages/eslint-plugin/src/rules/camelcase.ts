@@ -72,21 +72,63 @@ export default util.createRule<Options, MessageIds>({
      * @private
      */
     function isTSPropertyType(node: TSESTree.Node): boolean {
-      if (!node.parent) {
-        return false;
-      }
-      if (TS_PROPERTY_TYPES.includes(node.parent.type)) {
+      if (TS_PROPERTY_TYPES.includes(node.type)) {
         return true;
       }
 
-      if (node.parent.type === AST_NODE_TYPES.AssignmentPattern) {
+      if (node.type === AST_NODE_TYPES.AssignmentPattern) {
         return (
-          node.parent.parent !== undefined &&
-          TS_PROPERTY_TYPES.includes(node.parent.parent.type)
+          node.parent !== undefined &&
+          TS_PROPERTY_TYPES.includes(node.parent.type)
         );
       }
 
       return false;
+    }
+
+    /**
+     * Checks if the the node is a optional member expression.
+     * @param node the node to be validated.
+     * @returns true if the node is a optional member expression.
+     * @private
+     */
+    function isOptionalMemberExpression(node: TSESTree.Node): boolean {
+      return node.type === AST_NODE_TYPES.OptionalMemberExpression;
+    }
+
+    // Check underscored object names
+    function isUnderscoredParentObjectName(node: TSESTree.Identifier) {
+      const parent = node.parent!;
+
+      return (
+        parent.type === AST_NODE_TYPES.OptionalMemberExpression &&
+        parent.object.type === AST_NODE_TYPES.Identifier &&
+        parent.object.name === node.name
+      );
+    }
+
+    // Check assignmentExpressions if they are the left side of the assignment
+    function isLeftAssignmentExpressions(node: TSESTree.Identifier) {
+      const grandParent = node.parent!.parent;
+      if (!grandParent) {
+        return false;
+      }
+
+      return (
+        grandParent.type == AST_NODE_TYPES.AssignmentExpression &&
+        (grandParent.right.type !== AST_NODE_TYPES.MemberExpression ||
+          (grandParent.left.type === AST_NODE_TYPES.MemberExpression &&
+            grandParent.left.property.type === AST_NODE_TYPES.Identifier &&
+            grandParent.left.property.name === node.name))
+      );
+    }
+
+    function report(node: TSESTree.Identifier) {
+      context.report({
+        node,
+        messageId: 'notCamelCase',
+        data: { name: node.name },
+      });
     }
 
     return {
@@ -103,13 +145,23 @@ export default util.createRule<Options, MessageIds>({
         }
 
         // Check TypeScript specific nodes
-        if (isTSPropertyType(node)) {
+        const parent = node.parent;
+        if (parent && isTSPropertyType(parent)) {
           if (properties === 'always' && isUnderscored(name)) {
-            context.report({
-              node,
-              messageId: 'notCamelCase',
-              data: { name: node.name },
-            });
+            report(node);
+          }
+
+          return;
+        }
+
+        if (parent && parent.type === AST_NODE_TYPES.OptionalMemberExpression) {
+          if (
+            properties === 'always' &&
+            isUnderscored(name) &&
+            (isUnderscoredParentObjectName(node) ||
+              isLeftAssignmentExpressions(node))
+          ) {
+            report(node);
           }
 
           return;
