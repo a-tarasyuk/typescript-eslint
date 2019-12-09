@@ -36,22 +36,11 @@ export default util.createRule<Options, MessageIds>({
 
       // makes the rule think it should skip the left or right
       if (node.left.type === AST_NODE_TYPES.TSAsExpression) {
-        return rule({
-          ...node,
-          left: {
-            ...node.left,
-            type: AST_NODE_TYPES.BinaryExpression as any,
-          },
-        });
+        return rule({ ...node, left: node.left.expression });
       }
+
       if (node.right.type === AST_NODE_TYPES.TSAsExpression) {
-        return rule({
-          ...node,
-          right: {
-            ...node.right,
-            type: AST_NODE_TYPES.BinaryExpression as any,
-          },
-        });
+        return rule({ ...node, right: node.right.expression });
       }
 
       return rule(node);

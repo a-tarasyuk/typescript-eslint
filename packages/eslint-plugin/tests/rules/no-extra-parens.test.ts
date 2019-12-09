@@ -21,6 +21,8 @@ for (a of (b, c));
 for (a of b);
 for (a in b, c);
 for (a in b);
+((a as any) | 0) - 1;
+1 - ((a as any) | 0);
       `,
     }),
     `t.true((me.get as SinonStub).calledWithExactly('/foo', other));`,
@@ -265,5 +267,82 @@ var y = (function () {return 1;});
         },
       ],
     }),
+    {
+      code: `const a = (((a as any) | 0) - 1);`,
+      output: `const a = ((a as any) | 0) - 1;`,
+      errors: [
+        {
+          messageId: 'unexpected',
+          line: 1,
+          column: 11,
+        },
+      ],
+    },
+    {
+      code: `const a = (1 - ((a as any) | 0));`,
+      output: `const a = 1 - ((a as any) | 0);`,
+      errors: [
+        {
+          messageId: 'unexpected',
+          line: 1,
+          column: 11,
+        },
+      ],
+    },
+    {
+      code: `while ((foo as boolean)) {};`,
+      output: `while (foo as boolean) {};`,
+      errors: [
+        {
+          messageId: 'unexpected',
+          line: 1,
+          column: 8,
+        },
+      ],
+    },
+    {
+      code: `const x = ((1 as 1) | 2);`,
+      output: `const x = (1 as 1) | 2;`,
+      errors: [
+        {
+          messageId: 'unexpected',
+          line: 1,
+          column: 11,
+        },
+      ],
+    },
+    {
+      code: `const x = (1 | (2 as 2));`,
+      output: `const x = 1 | (2 as 2);`,
+      errors: [
+        {
+          messageId: 'unexpected',
+          line: 1,
+          column: 11,
+        },
+      ],
+    },
+    {
+      code: `const foo = { [((a + b) as string)]: c, d }`,
+      output: `const foo = { [(a + b) as string]: c, d }`,
+      errors: [
+        {
+          messageId: 'unexpected',
+          line: 1,
+          column: 16,
+        },
+      ],
+    },
+    {
+      code: `const foo = { [((a + b) as string)]: c, d }`,
+      output: `const foo = { [(a + b) as string]: c, d }`,
+      errors: [
+        {
+          messageId: 'unexpected',
+          line: 1,
+          column: 16,
+        },
+      ],
+    },
   ],
 });
